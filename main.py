@@ -1,4 +1,4 @@
-import os
+        import os
 import secrets
 import re
 from datetime import datetime, timezone
@@ -129,9 +129,16 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Defphonix Security API", lifespan=lifespan)
 
+# FIXED CORS CONFIGURATION
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://defphonix.shop", "http://defphonix.shop"], 
+    # Explicitly list production and local dev origins to safely use allow_credentials=True
+    allow_origins=[
+        "https://defphonix.shop", 
+        "http://defphonix.shop",
+        "http://localhost:3000",
+        "http://localhost:5173"
+    ], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
