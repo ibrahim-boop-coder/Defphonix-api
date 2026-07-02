@@ -1,5 +1,6 @@
 import os
 import secrets
+import re
 from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 
@@ -17,8 +18,8 @@ from dotenv import load_dotenv
 # ==========================================
 load_dotenv()
 
-# Using Supabase Postgres URL (ensure it looks like postgresql://user:pass@host:port/dbname)
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./dev.db") # Fallback for local testing if env var missing
+# Database URL (Fallback to SQLite for local dev if missing)
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./dev.db")
 
 # SQLAlchemy Setup
 engine = create_engine(DATABASE_URL)
@@ -62,6 +63,11 @@ class UserCredentials(BaseModel):
     email: EmailStr
     password: str
 
+class ScanRequest(BaseModel):
+    repo_name: str
+    commit_hash: str
+    code_snippet: str
+
 # ==========================================
 # 4. Security & Helper Functions
 # ==========================================
@@ -84,7 +90,36 @@ def get_db():
         db.close()
 
 # ==========================================
-# 5. FastAPI App Initialization & CORS
+# 5. Secret Scanning Engine
+# ==========================================
+# Pre-compile regex patterns for performance
+SECRET_PATTERNS = {
+    "AWS Access Key": re.compile(r"AKIA[0-9A-Z]{16}", re.IGNORECASE),
+    "Stripe Live Secret Key": re.compile(r"sk_live_[0-9a-zA-Z]{24}", re.IGNORECASE),
+    "GitHub Personal Access Token": re.compile(r"ghp_[0-9a-zA-Z]{36}")
+}
+
+def mask_secret(secret_type: str, secret: str) -> str:
+    """Masks the secret, leaving only the recognizable prefix exposed."""
+    prefix_length = 8 if secret_type == "Stripe Live Secret Key" else 4
+    if len(secret) <= prefix_length:
+        return "********"
+    return secret[:prefix_length] + "*" * (len(secret) - prefix_length)
+
+def scan_for_secrets(code_snippet: str) -> list:
+    """Scans code against known patterns and returns masked findings."""
+    findings = []
+    for secret_type, pattern in SECRET_PATTERNS.items():
+        for match in pattern.finditer(code_snippet):
+            raw_secret = match.group()
+            findings.append({
+                "type": secret_type,
+                "match": mask_secret(secret_type, raw_secret)
+            })
+    return findings
+
+# ==========================================
+# 6. FastAPI App Initialization & CORS
 # ==========================================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -103,7 +138,7 @@ app.add_middleware(
 )
 
 # ==========================================
-# 6. Endpoints
+# 7. Endpoints
 # ==========================================
 
 @app.post("/auth/register", status_code=status.HTTP_201_CREATED)
@@ -164,12 +199,13 @@ def login_user(credentials: UserCredentials, db: Session = Depends(get_db)):
 
 @app.post("/v1/scan")
 def trigger_scan(
+    payload: ScanRequest,
     credentials: HTTPAuthorizationCredentials = Security(security),
     db: Session = Depends(get_db)
 ):
     provided_key = credentials.credentials
     
-    # Verify the API key exists and is active
+    # 1. Authenticate the API Key
     api_key_record = db.query(ApiKey).filter(
         ApiKey.key == provided_key,
         ApiKey.is_active == True
@@ -182,8 +218,18 @@ def trigger_scan(
             headers={"WWW-Authenticate": "Bearer"},
         )
         
-    # Placeholder for Part 3 logic
+    # 2. Run the Scanning Engine
+    findings = scan_for_secrets(payload.code_snippet)
+    
+    # 3. Format the Response
+    if findings:
+        return {
+            "status": "vulnerable",
+            "repo_name": payload.repo_name,
+            "findings": findings
+        }
+    
     return {
-        "status": "success", 
-        "message": "API Key verified. Scan engine will be attached here."
+        "status": "secure", 
+        "message": "No hardcoded secrets detected."
     }
