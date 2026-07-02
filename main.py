@@ -129,20 +129,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Defphonix Security API", lifespan=lifespan)
 
-# FIXED CORS CONFIGURATION
+# FIXED CORS CONFIGURATION (Bulletproof Bypass)
 app.add_middleware(
     CORSMiddleware,
-    # Explicitly list production and local dev origins to safely use allow_credentials=True
-    allow_origins=[
-        "https://defphonix.shop", 
-        "http://defphonix.shop",
-        "http://localhost:3000",
-        "http://localhost:5173"
-    ], 
-    allow_credentials=True,
+    allow_origins=["*"],  # Ab hum wildcard use kar sakte hain
+    allow_credentials=False, # Isay False kar diya kyunke hum Cookies nahi, API Keys use kar rahe hain
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # ==========================================
 # 7. Endpoints
