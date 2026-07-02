@@ -1,4 +1,4 @@
-        import os
+import os
 import secrets
 import re
 from datetime import datetime, timezone
@@ -129,15 +129,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Defphonix Security API", lifespan=lifespan)
 
-# FIXED CORS CONFIGURATION (Bulletproof Bypass)
+# BULLETPROOF CORS CONFIGURATION
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Ab hum wildcard use kar sakte hain
-    allow_credentials=False, # Isay False kar diya kyunke hum Cookies nahi, API Keys use kar rahe hain
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 # ==========================================
 # 7. Endpoints
@@ -235,3 +234,4 @@ def trigger_scan(
         "status": "secure", 
         "message": "No hardcoded secrets detected."
     }
+
