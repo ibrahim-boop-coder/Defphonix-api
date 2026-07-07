@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 # Import Phase 2 Routers
 from routers import scanner
 from routers import linter
+from routers import soc2
 
 # ==========================================
 # 1. Configuration & Setup
@@ -150,6 +151,9 @@ app.include_router(scanner.router)
 
 # Include the Phase 2 IaC Misconfiguration Linter Router
 app.include_router(linter.router)
+
+# Include the Phase 2 SOC 2 Readiness Router
+app.include_router(soc2.router)
 
 # ==========================================
 # 8. Endpoints
