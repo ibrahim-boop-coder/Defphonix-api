@@ -13,8 +13,9 @@ from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr
 from dotenv import load_dotenv
 
-# Import Phase 2 Router
+# Import Phase 2 Routers
 from routers import scanner
+from routers import linter
 
 # ==========================================
 # 1. Configuration & Setup
@@ -146,6 +147,9 @@ app.add_middleware(
 # ==========================================
 # Include the Phase 2 Dependency Vuln-Checker Router
 app.include_router(scanner.router)
+
+# Include the Phase 2 IaC Misconfiguration Linter Router
+app.include_router(linter.router)
 
 # ==========================================
 # 8. Endpoints
