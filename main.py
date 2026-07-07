@@ -13,6 +13,9 @@ from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr
 from dotenv import load_dotenv
 
+# Import Phase 2 Router
+from routers import scanner
+
 # ==========================================
 # 1. Configuration & Setup
 # ==========================================
@@ -139,7 +142,13 @@ app.add_middleware(
 )
 
 # ==========================================
-# 7. Endpoints
+# 7. Router Mounts
+# ==========================================
+# Include the Phase 2 Dependency Vuln-Checker Router
+app.include_router(scanner.router)
+
+# ==========================================
+# 8. Endpoints
 # ==========================================
 
 @app.post("/auth/register", status_code=status.HTTP_201_CREATED)
@@ -234,4 +243,3 @@ def trigger_scan(
         "status": "secure", 
         "message": "No hardcoded secrets detected."
     }
-
